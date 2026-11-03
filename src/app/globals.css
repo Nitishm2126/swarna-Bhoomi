@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Three-Layer Design Tokens (Primitive -> Semantic) */
+  --brand-green-primary: #04331e;
+  --brand-green-surface: #0a4d2e;
+  --brand-green-dark: #022113;
+  --brand-green-light: #0f5937;
+
+  --brand-gold-primary: #d9a721;
+  --brand-gold-hover: #e5b83b;
+  --brand-gold-light: #f4d375;
+  --brand-gold-dark: #b28514;
+
+  --brand-cream-bg: #fcfbf7;
+  --brand-cream-surface: #f5f3ec;
+  --brand-cream-muted: #ede9de;
+
+  --brand-dark-text: #19241e;
+  --brand-dark-muted: #445148;
+  --brand-border: #e2ded4;
+
+  /* Semantic Aliases */
+  --background: var(--brand-cream-bg);
+  --foreground: var(--brand-dark-text);
+  --primary: var(--brand-green-primary);
+  --accent: var(--brand-gold-primary);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Accessible focus indicators for keyboard navigation */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Support for users with motion sensitivity */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
