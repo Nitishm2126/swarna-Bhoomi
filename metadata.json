@@ -1,0 +1,6 @@
+{
+  "name": "Swarna Bhoomi",
+  "description": "Swarna Bhoomi offers premium residential plots in Krishnapuram, Thiruvallur, along the Chennai–Tirupati National Highway corridor.",
+  "permissions": [],
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
