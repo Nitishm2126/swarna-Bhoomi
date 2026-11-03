@@ -1,20 +1,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plot } from '@/types/plot';
+import Image from 'next/image';
 import { siteConfig } from '@/config/site';
 import { generateWhatsAppEnquiryUrl, getPhoneCallHref } from '@/lib/whatsapp';
-import { submitEnquiry } from '@/services/enquiries.service';
+import { useScrollReveal, useStaggerReveal } from '@/lib/useScrollReveal';
 import {
   MessageCircle,
   Phone,
   CalendarCheck,
   CheckCircle2,
   AlertCircle,
-  Sparkles,
   MapPin,
-  Clock
+  Clock,
 } from 'lucide-react';
+import { Plot } from '@/types/plot';
+import { submitEnquiry } from '@/services/enquiries.service';
 
 interface MoreDetailsSectionProps {
   selectedPlot?: Plot | null;
@@ -30,6 +31,9 @@ export function MoreDetailsSection({ selectedPlot, className = '' }: MoreDetails
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  const sectionRef = useScrollReveal<HTMLElement>();
+  const formRef = useScrollReveal<HTMLDivElement>();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -44,7 +48,6 @@ export function MoreDetailsSection({ selectedPlot, className = '' }: MoreDetails
       return;
     }
 
-    // Submit to service
     await submitEnquiry({
       customerName: name,
       phone: cleanPhone,
@@ -58,7 +61,6 @@ export function MoreDetailsSection({ selectedPlot, className = '' }: MoreDetails
 
     setFormSubmitted(true);
 
-    // Open WhatsApp pre-filled
     const url = generateWhatsAppEnquiryUrl(selectedPlot, {
       name,
       phone: cleanPhone,
@@ -70,131 +72,126 @@ export function MoreDetailsSection({ selectedPlot, className = '' }: MoreDetails
   };
 
   return (
-    <section id="more-details-section" className={`py-16 sm:py-24 bg-brand-cream-surface/70 border-y border-brand-border/60 ${className}`}>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-12 lg:grid-cols-12 lg:items-center">
-          {/* Left Column: Direct Call, WhatsApp & Site Visit Action Cards */}
-          <div className="lg:col-span-6 space-y-6">
-            <div className="space-y-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-brand-gold">
-                Direct Project Advisory
+    <section
+      ref={sectionRef}
+      id="more-details-section"
+      className={`reveal py-20 sm:py-28 bg-brand-cream-surface/60 border-y border-brand-border/50 ${className}`}
+    >
+      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+        <div className="grid gap-14 lg:grid-cols-2 lg:items-start">
+          {/* Left Column: Direct Contact Actions */}
+          <div className="space-y-8">
+            <div>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-gold-dark">
+                Get in Touch
               </span>
-              <h2 className="font-serif text-3xl font-bold tracking-tight text-brand-green sm:text-4xl">
-                Let&rsquo;s Find the Right Plot for You
+              <h2 className="mt-3 font-serif heading-section text-3xl font-bold text-brand-green sm:text-4xl">
+                Let&rsquo;s Find the Right<br className="hidden sm:inline" /> Plot for You
               </h2>
-              <p className="text-sm leading-relaxed text-brand-dark-muted sm:text-base">
-                Connect with our team to explore plot availability, pricing, and site visits.
+              <p className="mt-4 text-[15px] leading-relaxed text-brand-dark-muted max-w-md">
+                Connect with our team to explore plot availability, pricing, and arrange a free guided site visit.
               </p>
             </div>
 
-            {/* Selected Plot Context Banner if applicable */}
+            {/* Selected Plot Banner */}
             {selectedPlot && (
-              <div className="rounded-xl border border-brand-gold/40 bg-brand-gold/10 p-4">
-                <div className="flex items-center gap-2 text-xs font-semibold text-brand-green">
-                  <Sparkles className="h-4 w-4 text-brand-gold" />
-                  <span>Plot Selected for Enquiry:</span>
-                </div>
+              <div className="rounded-xl border border-brand-gold/30 bg-brand-gold/8 p-4">
+                <p className="text-xs font-semibold text-brand-green">Selected for Enquiry</p>
                 <p className="mt-1 font-serif text-base font-bold text-brand-green">
-                  Plot #{selectedPlot.plotNumber} &bull; {selectedPlot.areaSqft} Sq.Ft. ({selectedPlot.facing || 'East'} Facing) &bull; {selectedPlot.phaseName}
+                  Plot #{selectedPlot.plotNumber} &bull; {selectedPlot.areaSqft} Sq.Ft. &bull; {selectedPlot.phaseName}
                 </p>
               </div>
             )}
 
-            {/* 3 Core Contact Actions */}
-            <div className="grid gap-4 sm:grid-cols-3">
-              {/* WhatsApp Action */}
+            {/* Contact Cards */}
+            <div className="grid gap-3 sm:grid-cols-3">
               <a
                 href={generateWhatsAppEnquiryUrl(selectedPlot)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex flex-col items-center justify-center rounded-xl bg-brand-green p-4 text-center text-white shadow-xs hover:bg-brand-green-surface transition-all group"
+                className="group flex flex-col items-center justify-center rounded-xl bg-brand-green p-5 text-center text-white hover:bg-brand-green-surface transition-colors"
               >
-                <MessageCircle className="h-6 w-6 text-brand-gold mb-2 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-bold">WhatsApp Enquiry</span>
-                <span className="text-[10px] text-brand-cream/70 mt-0.5">Instant chat</span>
+                <MessageCircle className="h-6 w-6 text-brand-gold mb-2.5 group-hover:scale-105 transition-transform" />
+                <span className="text-sm font-semibold">WhatsApp</span>
+                <span className="text-[11px] text-white/60 mt-0.5">Instant chat</span>
               </a>
 
-              {/* Call Now Action */}
               <a
                 href={getPhoneCallHref()}
-                className="flex flex-col items-center justify-center rounded-xl border border-brand-border bg-white p-4 text-center text-brand-dark shadow-xs hover:border-brand-green hover:text-brand-green transition-all group"
+                className="group flex flex-col items-center justify-center rounded-xl border border-brand-border bg-white p-5 text-center text-brand-dark hover:border-brand-green hover:text-brand-green transition-colors"
               >
-                <Phone className="h-6 w-6 text-brand-gold mb-2 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-bold">Call Now</span>
-                <span className="text-[10px] text-brand-dark-muted mt-0.5">+91 7339652776</span>
+                <Phone className="h-6 w-6 text-brand-gold mb-2.5 group-hover:scale-105 transition-transform" />
+                <span className="text-sm font-semibold">Call Now</span>
+                <span className="text-[11px] text-brand-dark-muted mt-0.5">+91 7339652776</span>
               </a>
 
-              {/* Site Visit Action */}
               <a
                 href="#enquiry-form-card"
-                className="flex flex-col items-center justify-center rounded-xl border border-brand-border bg-white p-4 text-center text-brand-dark shadow-xs hover:border-brand-green hover:text-brand-green transition-all group"
+                className="group flex flex-col items-center justify-center rounded-xl border border-brand-border bg-white p-5 text-center text-brand-dark hover:border-brand-green hover:text-brand-green transition-colors"
               >
-                <CalendarCheck className="h-6 w-6 text-brand-gold mb-2 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-bold">Book Site Visit</span>
-                <span className="text-[10px] text-brand-dark-muted mt-0.5">Free inspection</span>
+                <CalendarCheck className="h-6 w-6 text-brand-gold mb-2.5 group-hover:scale-105 transition-transform" />
+                <span className="text-sm font-semibold">Site Visit</span>
+                <span className="text-[11px] text-brand-dark-muted mt-0.5">Free inspection</span>
               </a>
             </div>
 
-            {/* Project Site Office & Contact Note */}
-            <div className="rounded-xl border border-brand-border bg-white p-5 space-y-3 text-xs text-brand-dark-muted">
-              <div className="flex items-start gap-2.5">
+            {/* Info Box */}
+            <div className="rounded-xl border border-brand-border bg-white p-5 space-y-3">
+              <div className="flex items-start gap-3 text-sm text-brand-dark-muted">
                 <MapPin className="h-4 w-4 text-brand-gold shrink-0 mt-0.5" />
                 <div>
-                  <strong className="text-brand-dark block">Site Location:</strong>
-                  Krishnapuram, Near Thiruvallur, Chennai–Tirupati National Highway (NH 716), Tamil Nadu.
+                  <strong className="text-brand-dark block text-[13px]">Site Location</strong>
+                  <span className="text-xs">Krishnapuram, Near Thiruvallur, NH 716, Tamil Nadu</span>
                 </div>
               </div>
-              <div className="flex items-start gap-2.5">
+              <div className="flex items-start gap-3 text-sm text-brand-dark-muted">
                 <Clock className="h-4 w-4 text-brand-gold shrink-0 mt-0.5" />
                 <div>
-                  <strong className="text-brand-dark block">Site Visit Assistance:</strong>
-                  Monday to Sunday: 9:00 AM – 6:00 PM (Prior appointment recommended).
+                  <strong className="text-brand-dark block text-[13px]">Visiting Hours</strong>
+                  <span className="text-xs">Mon – Sun: 9:00 AM – 6:00 PM (Appointment recommended)</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Interactive Lead Enquiry Form */}
-          <div id="enquiry-form-card" className="lg:col-span-6">
-            <div className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm sm:p-8">
+          {/* Right Column: Enquiry Form */}
+          <div ref={formRef} id="enquiry-form-card" className="reveal">
+            <div className="rounded-2xl border border-brand-border bg-white p-7 shadow-sm sm:p-9">
               <h3 className="font-serif text-xl font-bold text-brand-green sm:text-2xl">
-                Request Plot Details &amp; Pricing
+                Request Plot Details
               </h3>
-              <p className="mt-1 text-xs text-brand-dark-muted">
-                Receive pricing statements, DTCP documentation details, and schedule your guided site inspection.
+              <p className="mt-1.5 text-sm text-brand-dark-muted">
+                Get pricing, documentation details, and schedule your guided inspection.
               </p>
 
               {formSubmitted ? (
-                <div className="mt-6 rounded-xl bg-emerald-50 border border-emerald-200 p-6 text-center space-y-3">
+                <div className="mt-8 rounded-xl bg-emerald-50 border border-emerald-200 p-7 text-center space-y-3">
                   <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" />
-                  <h4 className="font-serif text-lg font-bold text-emerald-900">
-                    Enquiry Prepared!
-                  </h4>
-                  <p className="text-xs text-emerald-800 leading-relaxed">
-                    Your details have been pre-filled into WhatsApp. If WhatsApp did not open automatically, click the button below to send your enquiry directly to +91 7339652776.
+                  <h4 className="font-serif text-lg font-bold text-emerald-900">Enquiry Prepared!</h4>
+                  <p className="text-sm text-emerald-800">
+                    If WhatsApp did not open automatically, click below.
                   </p>
                   <a
                     href={generateWhatsAppEnquiryUrl(selectedPlot, { name, phone, topic, preferredPlotSize: preferredSize })}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-5 py-2.5 text-xs font-semibold text-white hover:bg-emerald-800"
+                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
                   >
                     <MessageCircle className="h-4 w-4" />
                     <span>Open in WhatsApp</span>
                   </a>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                <form onSubmit={handleSubmit} className="mt-7 space-y-5">
                   {errorMessage && (
-                    <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-700 border border-red-200">
+                    <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3.5 text-sm font-medium text-red-700 border border-red-200">
                       <AlertCircle className="h-4 w-4 shrink-0" />
                       <span>{errorMessage}</span>
                     </div>
                   )}
 
-                  {/* Full Name */}
                   <div className="space-y-1.5">
-                    <label htmlFor="lead-name" className="block text-xs font-bold uppercase tracking-wider text-brand-green">
+                    <label htmlFor="lead-name" className="block text-xs font-semibold uppercase tracking-wider text-brand-green">
                       Full Name *
                     </label>
                     <input
@@ -204,17 +201,16 @@ export function MoreDetailsSection({ selectedPlot, className = '' }: MoreDetails
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. Ramesh Kumar"
-                      className="w-full rounded-xl border border-brand-border bg-brand-cream-surface/40 px-3.5 py-2.5 text-sm font-medium text-brand-dark focus:border-brand-gold focus:bg-white focus:outline-hidden"
+                      className="w-full rounded-lg border border-brand-border bg-brand-cream/60 px-4 py-3 text-sm text-brand-dark placeholder:text-brand-dark-muted/50 focus:border-brand-gold focus:bg-white focus:outline-hidden transition-colors"
                     />
                   </div>
 
-                  {/* Mobile Number */}
                   <div className="space-y-1.5">
-                    <label htmlFor="lead-phone" className="block text-xs font-bold uppercase tracking-wider text-brand-green">
-                      Mobile Number (10 Digits) *
+                    <label htmlFor="lead-phone" className="block text-xs font-semibold uppercase tracking-wider text-brand-green">
+                      Mobile Number *
                     </label>
                     <div className="flex">
-                      <span className="inline-flex items-center rounded-l-xl border border-r-0 border-brand-border bg-brand-cream-surface px-3 text-xs font-semibold text-brand-dark-muted">
+                      <span className="inline-flex items-center rounded-l-lg border border-r-0 border-brand-border bg-brand-cream-surface px-3.5 text-sm font-medium text-brand-dark-muted">
                         +91
                       </span>
                       <input
@@ -225,76 +221,72 @@ export function MoreDetailsSection({ selectedPlot, className = '' }: MoreDetails
                         value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                         placeholder="7339652776"
-                        className="w-full rounded-r-xl border border-brand-border bg-brand-cream-surface/40 px-3.5 py-2.5 text-sm font-medium text-brand-dark focus:border-brand-gold focus:bg-white focus:outline-hidden"
+                        className="w-full rounded-r-lg border border-brand-border bg-brand-cream/60 px-4 py-3 text-sm text-brand-dark placeholder:text-brand-dark-muted/50 focus:border-brand-gold focus:bg-white focus:outline-hidden transition-colors"
                       />
                     </div>
                   </div>
 
-                  {/* Preferred Plot Size if no plot pre-selected */}
                   {!selectedPlot && (
                     <div className="space-y-1.5">
-                      <label htmlFor="preferred-size" className="block text-xs font-bold uppercase tracking-wider text-brand-green">
+                      <label htmlFor="preferred-size" className="block text-xs font-semibold uppercase tracking-wider text-brand-green">
                         Preferred Plot Size
                       </label>
                       <select
                         id="preferred-size"
                         value={preferredSize}
                         onChange={(e) => setPreferredSize(e.target.value)}
-                        className="w-full rounded-xl border border-brand-border bg-brand-cream-surface/40 px-3.5 py-2.5 text-xs font-semibold text-brand-dark focus:border-brand-gold focus:bg-white focus:outline-hidden"
+                        className="w-full rounded-lg border border-brand-border bg-brand-cream/60 px-4 py-3 text-sm text-brand-dark focus:border-brand-gold focus:bg-white focus:outline-hidden transition-colors"
                       >
                         <option value="517 – 800 sq.ft.">517 – 800 sq.ft. (Compact / Investment)</option>
                         <option value="801 – 1,200 sq.ft.">801 – 1,200 sq.ft. (Standard Villa)</option>
-                        <option value="1,201 – 1,600 sq.ft.">1,201 – 1,600 sq.ft. (Premium Horizon)</option>
-                        <option value="Not sure yet">Not sure yet (Explore all options)</option>
+                        <option value="1,201 – 1,600 sq.ft.">1,201 – 1,600 sq.ft. (Premium)</option>
+                        <option value="Not sure yet">Not sure yet</option>
                       </select>
                     </div>
                   )}
 
-                  {/* Enquiry Topic */}
                   <div className="space-y-1.5">
-                    <label htmlFor="enquiry-topic" className="block text-xs font-bold uppercase tracking-wider text-brand-green">
-                      What Would You Like to Know?
+                    <label htmlFor="enquiry-topic" className="block text-xs font-semibold uppercase tracking-wider text-brand-green">
+                      Enquiry Type
                     </label>
                     <select
                       id="enquiry-topic"
                       value={topic}
                       onChange={(e) => setTopic(e.target.value)}
-                      className="w-full rounded-xl border border-brand-border bg-brand-cream-surface/40 px-3.5 py-2.5 text-xs font-semibold text-brand-dark focus:border-brand-gold focus:bg-white focus:outline-hidden"
+                      className="w-full rounded-lg border border-brand-border bg-brand-cream/60 px-4 py-3 text-sm text-brand-dark focus:border-brand-gold focus:bg-white focus:outline-hidden transition-colors"
                     >
                       <option value="Price Details & Payment Schedule">Price Details &amp; Payment Schedule</option>
-                      <option value="Available Plots & Layout Map">Available Plots &amp; Master Layout Map</option>
-                      <option value="Book a Free Site Visit">Book a Free Site Visit with Guided Inspection</option>
-                      <option value="Approval Documents & Title Deed">Approval Documents &amp; Title Verification</option>
+                      <option value="Available Plots & Layout Map">Available Plots &amp; Layout Map</option>
+                      <option value="Book a Free Site Visit">Book a Free Site Visit</option>
+                      <option value="Approval Documents & Title Deed">Approval Documents &amp; Title Deed</option>
                     </select>
                   </div>
 
-                  {/* Preferred Date if Booking Site Visit */}
                   {topic.includes('Site Visit') && (
-                    <div className="space-y-1.5 animate-in fade-in-50">
-                      <label htmlFor="visit-date" className="block text-xs font-bold uppercase tracking-wider text-brand-green">
-                        Preferred Site Visit Date
+                    <div className="space-y-1.5">
+                      <label htmlFor="visit-date" className="block text-xs font-semibold uppercase tracking-wider text-brand-green">
+                        Preferred Visit Date
                       </label>
                       <input
                         id="visit-date"
                         type="date"
                         value={siteVisitDate}
                         onChange={(e) => setSiteVisitDate(e.target.value)}
-                        className="w-full rounded-xl border border-brand-border bg-brand-cream-surface/40 px-3.5 py-2 text-xs font-medium text-brand-dark focus:border-brand-gold focus:outline-hidden"
+                        className="w-full rounded-lg border border-brand-border bg-brand-cream/60 px-4 py-3 text-sm text-brand-dark focus:border-brand-gold focus:outline-hidden transition-colors"
                       />
                     </div>
                   )}
 
-                  {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-green px-5 py-3 text-sm font-bold text-white shadow-md hover:bg-brand-green-surface transition-colors cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-green px-5 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-brand-green-surface transition-colors cursor-pointer"
                   >
                     <MessageCircle className="h-4 w-4 text-brand-gold" />
                     <span>Send Enquiry via WhatsApp</span>
                   </button>
 
-                  <p className="text-[11px] text-center text-brand-dark-muted leading-tight">
-                    Submission opens WhatsApp with your pre-filled inquiry. You can review the details before clicking send.
+                  <p className="text-xs text-center text-brand-dark-muted/70">
+                    Opens WhatsApp with your pre-filled enquiry. Review before sending.
                   </p>
                 </form>
               )}

@@ -1,5 +1,9 @@
+'use client';
+
 import React from 'react';
+import Image from 'next/image';
 import { TOWNSHIP_CONCEPTS } from '@/services/projects.service';
+import { useStaggerReveal, useScrollReveal } from '@/lib/useScrollReveal';
 import {
   Building2,
   HeartHandshake,
@@ -7,60 +11,78 @@ import {
   Sprout,
   Compass,
   Palmtree,
-  CheckCircle
 } from 'lucide-react';
 
 const conceptIcons: Record<string, React.ReactNode> = {
-  'concept-township': <Building2 className="h-6 w-6 text-brand-gold" />,
-  'concept-retirement': <HeartHandshake className="h-6 w-6 text-brand-gold" />,
-  'concept-namma-gramam': <Trees className="h-6 w-6 text-brand-gold" />,
-  'concept-farmland': <Sprout className="h-6 w-6 text-brand-gold" />,
-  'concept-adventure': <Compass className="h-6 w-6 text-brand-gold" />,
-  'concept-resort-spa': <Palmtree className="h-6 w-6 text-brand-gold" />,
+  'concept-township': <Building2 className="h-5 w-5" />,
+  'concept-retirement': <HeartHandshake className="h-5 w-5" />,
+  'concept-namma-gramam': <Trees className="h-5 w-5" />,
+  'concept-farmland': <Sprout className="h-5 w-5" />,
+  'concept-adventure': <Compass className="h-5 w-5" />,
+  'concept-resort-spa': <Palmtree className="h-5 w-5" />,
 };
 
+const conceptNumbers = ['01', '02', '03', '04', '05', '06'];
+
 export function TownshipConcepts() {
+  const headerRef = useScrollReveal<HTMLDivElement>();
+  const imageRef = useScrollReveal<HTMLDivElement>();
+  const gridRef = useStaggerReveal<HTMLDivElement>();
+
   return (
-    <section id="township-concepts-section" className="py-16 sm:py-20 scroll-mt-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-brand-gold">
-            Township Master Blueprint
+    <section id="township-concepts-section" className="py-20 sm:py-28 scroll-mt-20 bg-white border-t border-brand-border/40">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+        {/* Header */}
+        <div ref={headerRef} className="reveal max-w-2xl">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-gold-dark">
+            Township Vision
           </span>
-          <h2 className="font-serif text-3xl font-bold tracking-tight text-brand-green sm:text-4xl">
-            A Multidimensional Lifestyle Township
+          <h2 className="mt-3 font-serif heading-section text-3xl font-bold text-brand-green sm:text-4xl">
+            Six Integrated Living<br className="hidden sm:inline" /> Concepts, One Destination
           </h2>
-          <p className="text-sm leading-relaxed text-brand-dark-muted sm:text-base">
-            Swarna Bhoomi brings together curated living zones featured in the project vision — balancing quiet residential sanctuaries with leisure, community culture, and nature.
+          <p className="mt-4 text-[15px] leading-relaxed text-brand-dark-muted max-w-xl">
+            Swarna Bhoomi brings together curated living zones — balancing quiet residential sanctuaries with leisure, community culture, and nature.
           </p>
         </div>
 
-        {/* 6 Editorial Concept Cards */}
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {TOWNSHIP_CONCEPTS.map((concept) => (
+        {/* Concepts Image (from brochure) */}
+        <div ref={imageRef} className="reveal mt-12 overflow-hidden rounded-2xl border border-brand-border/60">
+          <Image
+            src="/assets/site/concepts.jpg"
+            alt="Swarna Bhoomi 6 Concepts 1 Destination — Residential Township, Retirement Community, Namma Gramam, Adventure Sports, Holiday Resort and Spa, Farmland"
+            width={1280}
+            height={720}
+            className="w-full h-auto"
+            sizes="(max-width: 768px) 100vw, 1200px"
+            quality={80}
+          />
+        </div>
+
+        {/* Concept Cards Grid */}
+        <div ref={gridRef} className="mt-14 grid gap-px sm:grid-cols-2 lg:grid-cols-3 bg-brand-border/40 rounded-xl overflow-hidden border border-brand-border/40">
+          {TOWNSHIP_CONCEPTS.map((concept, idx) => (
             <div
               key={concept.id}
-              className="flex flex-col justify-between rounded-xl border border-brand-border bg-white p-6 shadow-xs hover:border-brand-green/40 hover:shadow-md transition-all"
+              className={`reveal reveal-delay-${Math.min(idx + 1, 4)} bg-brand-cream p-7 sm:p-8 flex flex-col`}
             >
-              <div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-green/5 border border-brand-green/10 mb-4">
+              <div className="flex items-start justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-green/5 text-brand-green">
                   {conceptIcons[concept.id]}
                 </div>
-                <h3 className="font-serif text-lg font-bold text-brand-green">
-                  {concept.title}
-                </h3>
-                <p className="mt-1 text-xs font-semibold text-brand-gold">
-                  {concept.subtitle}
-                </p>
-                <p className="mt-3 text-xs leading-relaxed text-brand-dark-muted sm:text-sm">
-                  {concept.description}
-                </p>
+                <span className="font-serif text-3xl font-bold text-brand-border/80">
+                  {conceptNumbers[idx]}
+                </span>
               </div>
 
-              <div className="mt-5 pt-3 border-t border-brand-border/40 flex items-center gap-1.5 text-[11px] font-medium text-brand-green">
-                <CheckCircle className="h-3.5 w-3.5 text-brand-gold" />
-                <span>Concept Blueprint</span>
-              </div>
+              <h3 className="mt-5 font-serif text-lg font-bold text-brand-green leading-snug">
+                {concept.title}
+              </h3>
+              <p className="mt-1 text-xs font-medium text-brand-gold-dark">
+                {concept.subtitle}
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-brand-dark-muted flex-1">
+                {concept.description}
+              </p>
             </div>
           ))}
         </div>

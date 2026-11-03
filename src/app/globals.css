@@ -3,24 +3,24 @@
 @tailwind utilities;
 
 :root {
-  /* Three-Layer Design Tokens (Primitive -> Semantic) */
+  /* Primitive Tokens */
   --brand-green-primary: #04331e;
   --brand-green-surface: #0a4d2e;
   --brand-green-dark: #022113;
   --brand-green-light: #0f5937;
 
-  --brand-gold-primary: #d9a721;
-  --brand-gold-hover: #e5b83b;
-  --brand-gold-light: #f4d375;
-  --brand-gold-dark: #b28514;
+  --brand-gold-primary: #c9982e;
+  --brand-gold-hover: #d5a940;
+  --brand-gold-light: #e8c96d;
+  --brand-gold-dark: #a87c1a;
 
-  --brand-cream-bg: #fcfbf7;
-  --brand-cream-surface: #f5f3ec;
-  --brand-cream-muted: #ede9de;
+  --brand-cream-bg: #faf9f6;
+  --brand-cream-surface: #f3f1eb;
+  --brand-cream-muted: #e8e4d9;
 
-  --brand-dark-text: #19241e;
-  --brand-dark-muted: #445148;
-  --brand-border: #e2ded4;
+  --brand-dark-text: #1a1f1c;
+  --brand-dark-muted: #596259;
+  --brand-border: #ddd9cf;
 
   /* Semantic Aliases */
   --background: var(--brand-cream-bg);
@@ -42,12 +42,24 @@
     font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Accessible focus indicators for keyboard navigation */
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+
+  /* Prevent tap highlight on mobile */
+  button, a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Remove scroll anchoring jitter */
+  * {
+    scroll-margin-top: 5rem;
   }
 
   /* Support for users with motion sensitivity */
@@ -60,5 +72,65 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+  }
+}
+
+@layer utilities {
+  /* Scroll-triggered reveal animation classes */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+  }
+
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .reveal-delay-1 { transition-delay: 100ms; }
+  .reveal-delay-2 { transition-delay: 200ms; }
+  .reveal-delay-3 { transition-delay: 300ms; }
+  .reveal-delay-4 { transition-delay: 400ms; }
+
+  /* Image reveal */
+  .img-reveal {
+    clip-path: inset(100% 0 0 0);
+    transition: clip-path 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .img-reveal.is-visible {
+    clip-path: inset(0 0 0 0);
+  }
+
+  /* Subtle parallax helper */
+  .parallax-slow {
+    will-change: transform;
+  }
+
+  /* Premium heading styles */
+  .heading-display {
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  .heading-section {
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+  }
+
+  /* Smooth image loading */
+  .img-smooth {
+    transition: opacity 0.4s ease;
+  }
+
+  .img-smooth[data-loaded="false"] {
+    opacity: 0;
+  }
+
+  .img-smooth[data-loaded="true"] {
+    opacity: 1;
   }
 }

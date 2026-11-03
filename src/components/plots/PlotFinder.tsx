@@ -5,19 +5,15 @@ import { Plot, PlotFilterCriteria, SearchMode, FacingDirection, PlotAvailability
 import { searchPlots } from '@/services/plots.service';
 import { PlotCard } from './PlotCard';
 import { PlotLayoutSimulator } from '../simulator/PlotLayoutSimulator';
+import { useScrollReveal } from '@/lib/useScrollReveal';
 import {
   Search,
   SlidersHorizontal,
   RotateCcw,
   Compass,
   Layers,
-  ArrowUpDown,
-  Check,
   ChevronDown,
   Sparkles,
-  Info,
-  Building,
-  CheckCircle2
 } from 'lucide-react';
 
 interface PlotFinderProps {
@@ -27,7 +23,7 @@ interface PlotFinderProps {
 
 export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProps) {
   // Filter state
-  const [areaInput, setAreaInput] = useState<string>('700'); // Default to 700 sqft as specified in journey
+  const [areaInput, setAreaInput] = useState<string>('700');
   const [searchMode, setSearchMode] = useState<SearchMode>('nearby');
   const [tolerance, setTolerance] = useState<number>(50);
   const [facing, setFacing] = useState<FacingDirection | 'All'>('All');
@@ -46,6 +42,8 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
   const [totalInventory, setTotalInventory] = useState<number>(initialPlots.length);
   const [selectedPlot, setSelectedPlot] = useState<Plot | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const headerRef = useScrollReveal<HTMLDivElement>();
 
   // Execute search whenever filter criteria change
   useEffect(() => {
@@ -67,12 +65,10 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
       setTotalMatches(res.totalMatches);
       setTotalInventory(res.totalInventory);
 
-      // Keep selection in sync safely without adding selectedPlot to dependency array
       setSelectedPlot((prev) => (prev && !res.plots.some((p) => p.id === prev.id) ? null : prev));
     });
   }, [areaInput, searchMode, tolerance, facing, phase, availability, minWidth, minLength, sortBy]);
 
-  // Reset all filters to default
   const handleResetFilters = () => {
     setAreaInput('');
     setSearchMode('exact');
@@ -85,7 +81,6 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
     setSortBy('area_asc');
   };
 
-  // Scroll to simulator smoothly when user clicks "View on Layout"
   const handleViewOnLayout = (plot: Plot) => {
     setSelectedPlot(plot);
     const layoutElement = document.getElementById('plot-simulator-section');
@@ -94,33 +89,31 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
     }
   };
 
-  // Preset quick sizes
   const sizePresets = [600, 700, 800, 1000, 1200, 1500];
 
   return (
     <section id="plot-finder-section" className={`scroll-mt-24 space-y-10 ${className}`}>
       {/* Section Header */}
-      <div className="text-center max-w-3xl mx-auto space-y-3">
-        <div className="inline-flex items-center gap-2 rounded-full border border-brand-green/15 bg-brand-green/5 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-brand-green">
-          <Sparkles className="h-3.5 w-3.5 text-brand-gold" />
-          <span>Verified Inventory Search</span>
-        </div>
-        <h2 className="font-serif text-3xl font-bold tracking-tight text-brand-green sm:text-4xl">
-          Find Your Perfect Residential Plot
+      <div ref={headerRef} className="reveal text-center max-w-3xl mx-auto space-y-3">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-gold-dark">
+          Inventory Explorer
+        </span>
+        <h2 className="font-serif heading-section text-3xl font-bold text-brand-green sm:text-4xl">
+          Find Your Ideal Plot
         </h2>
-        <p className="text-sm leading-relaxed text-brand-dark-muted sm:text-base">
-          Search real plot area statements across Phase 1, Phase 2, and Phase 3. Filter by exact square feet, facing direction, or tolerance with immediate master plan visualization.
+        <p className="text-[15px] leading-relaxed text-brand-dark-muted">
+          Search real plot area statements across Phase 1, Phase 2, and Phase 3. Filter by square feet, facing direction, or tolerance with immediate master plan visualization.
         </p>
       </div>
 
       {/* Filter Control Console */}
-      <div className="rounded-2xl border border-brand-border bg-white p-5 shadow-xs sm:p-7">
+      <div className="rounded-2xl border border-brand-border bg-white p-6 shadow-xs sm:p-8">
         <div className="space-y-6">
           {/* Row 1: Primary Area Input + Search Modes */}
           <div className="grid gap-6 md:grid-cols-12 md:items-end">
             {/* Area in Sq.Ft. */}
             <div className="md:col-span-5 space-y-2">
-              <label htmlFor="area-input" className="block text-xs font-bold uppercase tracking-wider text-brand-green">
+              <label htmlFor="area-input" className="block text-xs font-semibold uppercase tracking-wider text-brand-green">
                 Desired Plot Area (Sq.Ft.)
               </label>
               <div className="relative">
@@ -133,7 +126,7 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
                   value={areaInput}
                   onChange={(e) => setAreaInput(e.target.value)}
                   placeholder="e.g. 700"
-                  className="w-full rounded-xl border border-brand-border bg-brand-cream-surface/40 px-4 py-3 text-base font-semibold text-brand-dark placeholder:text-brand-dark-muted/60 focus:border-brand-gold focus:bg-white focus:outline-hidden transition-all"
+                  className="w-full rounded-xl border border-brand-border bg-brand-cream/60 px-4 py-3 text-base font-semibold text-brand-dark placeholder:text-brand-dark-muted/50 focus:border-brand-gold focus:bg-white focus:outline-hidden transition-all"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-brand-dark-muted">
                   Sq.Ft.
@@ -162,10 +155,10 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
 
             {/* Search Modes (Exact, Nearby with Tolerance, Minimum) */}
             <div className="md:col-span-4 space-y-2">
-              <span className="block text-xs font-bold uppercase tracking-wider text-brand-green">
+              <span className="block text-xs font-semibold uppercase tracking-wider text-brand-green">
                 Area Match Mode
               </span>
-              <div className="grid grid-cols-3 rounded-xl border border-brand-border bg-brand-cream-surface/60 p-1 text-xs font-semibold">
+              <div className="grid grid-cols-3 rounded-xl border border-brand-border bg-brand-cream-surface/70 p-1 text-xs font-semibold">
                 <button
                   type="button"
                   onClick={() => setSearchMode('exact')}
@@ -211,9 +204,9 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
                         key={t}
                         type="button"
                         onClick={() => setTolerance(t)}
-                        className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${
+                        className={`rounded px-2 py-0.5 text-[11px] font-semibold transition-colors ${
                           tolerance === t
-                            ? 'bg-brand-gold text-brand-dark'
+                            ? 'bg-brand-gold text-brand-green-dark'
                             : 'bg-brand-cream-surface text-brand-dark-muted hover:text-brand-dark'
                         }`}
                       >
@@ -227,7 +220,7 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
 
             {/* Sorting Dropdown */}
             <div className="md:col-span-3 space-y-2">
-              <label htmlFor="sort-dropdown" className="block text-xs font-bold uppercase tracking-wider text-brand-green">
+              <label htmlFor="sort-dropdown" className="block text-xs font-semibold uppercase tracking-wider text-brand-green">
                 Sort Inventory
               </label>
               <div className="relative">
@@ -235,7 +228,7 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
                   id="sort-dropdown"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="w-full appearance-none rounded-xl border border-brand-border bg-brand-cream-surface/40 px-3.5 py-3 pr-8 text-xs font-semibold text-brand-dark focus:border-brand-gold focus:bg-white focus:outline-hidden"
+                  className="w-full appearance-none rounded-xl border border-brand-border bg-brand-cream/60 px-3.5 py-3 pr-8 text-xs font-semibold text-brand-dark focus:border-brand-gold focus:bg-white focus:outline-hidden"
                 >
                   <option value="area_asc">Area: Low to High</option>
                   <option value="area_desc">Area: High to Low</option>
@@ -247,13 +240,13 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
             </div>
           </div>
 
-          {/* Row 2: Secondary Quick Filter Tabs (Phase, Facing, Availability) */}
+          {/* Row 2: Secondary Quick Filter Tabs */}
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-brand-border/60 pt-4">
             <div className="flex flex-wrap items-center gap-3 text-xs">
               {/* Phase Selector */}
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold text-brand-dark-muted">Phase:</span>
-                <div className="inline-flex rounded-lg border border-brand-border bg-brand-cream-surface/50 p-0.5">
+                <div className="inline-flex rounded-lg border border-brand-border bg-brand-cream-surface/70 p-0.5">
                   {(['All', 1, 2, 3] as const).map((p) => (
                     <button
                       key={p}
@@ -261,7 +254,7 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
                       onClick={() => setPhase(p)}
                       className={`rounded px-2.5 py-1 font-medium transition-colors ${
                         phase === p
-                          ? 'bg-brand-green text-white'
+                          ? 'bg-brand-green text-white shadow-xs'
                           : 'text-brand-dark-muted hover:text-brand-dark'
                       }`}
                     >
@@ -274,7 +267,7 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
               {/* Facing Selector */}
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold text-brand-dark-muted">Facing:</span>
-                <div className="inline-flex rounded-lg border border-brand-border bg-brand-cream-surface/50 p-0.5">
+                <div className="inline-flex rounded-lg border border-brand-border bg-brand-cream-surface/70 p-0.5">
                   {(['All', 'East', 'North', 'West', 'South'] as const).map((f) => (
                     <button
                       key={f}
@@ -282,7 +275,7 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
                       onClick={() => setFacing(f)}
                       className={`rounded px-2.5 py-1 font-medium transition-colors ${
                         facing === f
-                          ? 'bg-brand-green text-white'
+                          ? 'bg-brand-green text-white shadow-xs'
                           : 'text-brand-dark-muted hover:text-brand-dark'
                       }`}
                     >
@@ -295,7 +288,7 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
               {/* Availability Selector */}
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold text-brand-dark-muted">Status:</span>
-                <div className="inline-flex rounded-lg border border-brand-border bg-brand-cream-surface/50 p-0.5">
+                <div className="inline-flex rounded-lg border border-brand-border bg-brand-cream-surface/70 p-0.5">
                   {(['Available', 'Reserved', 'Sold', 'All'] as const).map((a) => (
                     <button
                       key={a}
@@ -303,7 +296,7 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
                       onClick={() => setAvailability(a)}
                       className={`rounded px-2.5 py-1 font-medium transition-colors ${
                         availability === a
-                          ? 'bg-brand-green text-white'
+                          ? 'bg-brand-green text-white shadow-xs'
                           : 'text-brand-dark-muted hover:text-brand-dark'
                       }`}
                     >
@@ -343,7 +336,7 @@ export function PlotFinder({ initialPlots = [], className = '' }: PlotFinderProp
 
           {/* Row 3 (Collapsible): Dimension Constraints */}
           {showAdvanced && (
-            <div className="grid gap-4 rounded-xl border border-brand-border/60 bg-brand-cream-surface/40 p-4 sm:grid-cols-2 text-xs">
+            <div className="grid gap-4 rounded-xl border border-brand-border/60 bg-brand-cream/50 p-4 sm:grid-cols-2 text-xs">
               <div className="space-y-1.5">
                 <label htmlFor="min-width" className="block font-semibold text-brand-dark">
                   Minimum Frontage Width (Feet)
