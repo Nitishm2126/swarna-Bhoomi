@@ -2,26 +2,19 @@
 
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { siteConfig } from '@/config/site';
 import { generateWhatsAppEnquiryUrl, getPhoneCallHref } from '@/lib/whatsapp';
 import { useScrollReveal } from '@/lib/useScrollReveal';
 import {
   MapPin,
-  ArrowDown,
+  ArrowRight,
   MessageCircle,
   PhoneCall,
 } from 'lucide-react';
 
 export function HeroSection() {
   const headingRef = useScrollReveal<HTMLDivElement>();
-
-  const handleExplorePlots = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const element = document.getElementById('plot-finder-section');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
 
   return (
     <section className="relative min-h-[100svh] flex items-center overflow-hidden bg-brand-green">
@@ -71,7 +64,7 @@ export function HeroSection() {
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-white/90">
             <span className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-gold" />
-              DTCP Approved
+              DTCP Approved: 92/2026
             </span>
             <span className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-gold" />
@@ -83,16 +76,15 @@ export function HeroSection() {
             </span>
           </div>
 
-          {/* CTAs */}
+          {/* CTAs: Primary "Find Your Dream Plot" navigates to /plots */}
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <a
-              href="#plot-finder-section"
-              onClick={handleExplorePlots}
+            <Link
+              href="/plots"
               className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-brand-gold px-7 py-3.5 text-sm font-bold text-brand-green-dark shadow-lg hover:bg-brand-gold-hover transition-colors"
             >
-              <span>Explore Plots</span>
-              <ArrowDown className="h-4 w-4" />
-            </a>
+              <span>Find Your Dream Plot</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
 
             <a
               href={generateWhatsAppEnquiryUrl()}

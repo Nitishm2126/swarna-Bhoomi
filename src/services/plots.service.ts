@@ -1,9 +1,61 @@
-import { Plot, PlotFilterCriteria, PlotAvailability } from '@/types/plot';
+import {
+  Plot,
+  PlotFilterCriteria,
+  PlotAvailability,
+  SmartPlotPreferences,
+  SmartPlotResponse,
+} from '@/types/plot';
 import { INITIAL_PLOTS } from './plots.data';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 
 const STORAGE_KEY = 'swarna_bhoomi_plots_v1';
 let inMemoryPlots: Plot[] = [...INITIAL_PLOTS];
+
+/**
+ * Normalizes any plot object so all required attributes are populated.
+ */
+function normalizePlot(plot: Plot): Plot {
+  const pricePerSqft = plot.pricePerSqft ?? (plot.isCorner ? 1200 : 1150);
+  const price = plot.price ?? Math.round(plot.areaSqft * pricePerSqft);
+  const roadWidth = plot.roadWidthFeet ?? (plot.isCorner ? 40 : 30);
+  const cornerPosition =
+    plot.cornerPosition ??
+    (plot.isCorner
+      ? `Corner plot adjoining ${roadWidth}ft Main Avenue & 30ft Sector Cross Road`
+      : null);
+  const description =
+    plot.description ??
+    `Prime residential plot #${plot.plotNumber} situated in ${plot.phaseName} of Swarna Bhoomi Township. Features ${plot.facing || 'East'} orientation, direct access to ${roadWidth}ft blacktop road, and official DTCP approved boundary demarcation.`;
+  const additionalSpecifications = plot.additionalSpecifications ?? {
+    'Approval Status': 'DTCP Approved (No: 92/2026)',
+    'Survey Number': '143/1A1B, Krishnapuram',
+    'Bank Loan': '80% Approved (SBI / HDFC / Axis Bank)',
+    'Groundwater': 'Sweet Potable Water at 35–45 ft depth',
+    'Road Infrastructure': `${roadWidth}ft Tar Blacktop with Kerb Stones`,
+    'Demarcation': 'Numbered Concrete Survey Stone Placed',
+    'Title & Registration': 'Clear Parent Title, Immediate Registration & Patta',
+  };
+  const images =
+    plot.images && plot.images.length > 0
+      ? plot.images
+      : [
+          '/assets/site/layout-plan.jpg',
+          '/assets/site/hero-banner.jpg',
+          '/assets/site/concepts.jpg',
+          '/assets/site/plot-details.jpg',
+        ];
+
+  return {
+    ...plot,
+    price,
+    pricePerSqft,
+    roadWidthFeet: roadWidth,
+    cornerPosition,
+    description,
+    images,
+    additionalSpecifications,
+  };
+}
 
 /**
  * Retrieves the working plot dataset.
@@ -12,21 +64,22 @@ let inMemoryPlots: Plot[] = [...INITIAL_PLOTS];
  */
 export function getStoredPlots(): Plot[] {
   if (typeof window === 'undefined') {
-    return inMemoryPlots;
+    return inMemoryPlots.map(normalizePlot);
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_PLOTS));
       inMemoryPlots = [...INITIAL_PLOTS];
-      return inMemoryPlots;
+      return inMemoryPlots.map(normalizePlot);
     }
     const parsed = JSON.parse(raw);
-    inMemoryPlots = Array.isArray(parsed) && parsed.length > 0 ? parsed : [...INITIAL_PLOTS];
-    return inMemoryPlots;
+    inMemoryPlots =
+      Array.isArray(parsed) && parsed.length > 0 ? parsed : [...INITIAL_PLOTS];
+    return inMemoryPlots.map(normalizePlot);
   } catch (err) {
     console.warn('Failed to load plots from localStorage, using initial seed', err);
-    return inMemoryPlots;
+    return inMemoryPlots.map(normalizePlot);
   }
 }
 
@@ -34,10 +87,11 @@ export function getStoredPlots(): Plot[] {
  * Persists plot array to memory and localStorage
  */
 export function saveStoredPlots(plots: Plot[]): void {
-  inMemoryPlots = [...plots];
+  const normalized = plots.map(normalizePlot);
+  inMemoryPlots = [...normalized];
   if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(plots));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
     } catch (err) {
       console.error('Failed to save plots to localStorage', err);
     }
@@ -45,36 +99,153 @@ export function saveStoredPlots(plots: Plot[]): void {
 }
 
 /**
- * Primary Plot Search & Filtering Logic.
- * If Supabase is connected, it can query PostgreSQL, or run client-side/isomorphic
- * against the verified plot repository with exact mathematical matching.
+ * SMART PLOT MATCHING ENGINE
+ *
+ * Filters inventory by customer preferences (size, budget, facing, corner, phase, status)
+ * and returns paginated, logically sorted results.
+ */
+export async function searchPlotsSmart(
+  preferences: SmartPlotPreferences
+): Promise<SmartPlotResponse> {
+  const allPlots = getStoredPlots();
+  const totalInventory = allPlots.length;
+
+  const {
+    minArea,
+    maxArea,
+    minBudget,
+    maxBudget,
+    facing = 'All',
+    cornerPreference = 'any',
+    phase = 'All',
+    availability = 'Available',
+    sortBy = 'price_asc',
+    page = 1,
+    limit = 5,
+  } = preferences;
+
+  // Filter according to customer requirements
+  const matched = allPlots.filter((plot) => {
+    // 1. Availability Status
+    if (availability !== 'All' && plot.availability !== availability) {
+      return false;
+    }
+
+    // 2. Phase Filter
+    if (phase !== 'All' && plot.phaseNumber !== Number(phase)) {
+      return false;
+    }
+
+    // 3. Facing Direction
+    if (facing !== 'All') {
+      if (!plot.facing || plot.facing.toLowerCase() !== facing.toLowerCase()) {
+        return false;
+      }
+    }
+
+    // 4. Corner Plot Preference
+    if (cornerPreference === 'corner_only' && !plot.isCorner) {
+      return false;
+    }
+    if (cornerPreference === 'non_corner' && plot.isCorner) {
+      return false;
+    }
+
+    // 5. Plot Size / Area in Sq.Ft.
+    if (minArea !== null && minArea !== undefined && minArea > 0) {
+      if (plot.areaSqft < minArea) {
+        return false;
+      }
+    }
+    if (maxArea !== null && maxArea !== undefined && maxArea > 0) {
+      if (plot.areaSqft > maxArea) {
+        return false;
+      }
+    }
+
+    // 6. Budget in Indian Rupees (INR)
+    const plotPrice = plot.price ?? Math.round(plot.areaSqft * (plot.isCorner ? 1200 : 1150));
+    if (minBudget !== null && minBudget !== undefined && minBudget > 0) {
+      if (plotPrice < minBudget) {
+        return false;
+      }
+    }
+    if (maxBudget !== null && maxBudget !== undefined && maxBudget > 0) {
+      if (plotPrice > maxBudget) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Logical Sorting
+  const sorted = [...matched].sort((a, b) => {
+    const priceA = a.price ?? Math.round(a.areaSqft * (a.isCorner ? 1200 : 1150));
+    const priceB = b.price ?? Math.round(b.areaSqft * (b.isCorner ? 1200 : 1150));
+
+    switch (sortBy) {
+      case 'price_asc':
+        return priceA - priceB;
+      case 'price_desc':
+        return priceB - priceA;
+      case 'area_asc':
+        return a.areaSqft - b.areaSqft;
+      case 'area_desc':
+        return b.areaSqft - a.areaSqft;
+      case 'plot_asc':
+        return (
+          parseInt(a.plotNumber, 10) - parseInt(b.plotNumber, 10) ||
+          a.plotNumber.localeCompare(b.plotNumber)
+        );
+      case 'phase_asc':
+        return a.phaseNumber - b.phaseNumber;
+      default:
+        return priceA - priceB;
+    }
+  });
+
+  // Pagination (first 5, then next 5, etc.)
+  const validPage = Math.max(1, page);
+  const validLimit = Math.max(1, limit);
+  const startIndex = (validPage - 1) * validLimit;
+  const paginatedPlots = sorted.slice(startIndex, startIndex + validLimit);
+  const totalMatches = sorted.length;
+  const totalPages = Math.ceil(totalMatches / validLimit) || 1;
+  const hasMore = startIndex + validLimit < totalMatches;
+
+  return {
+    plots: paginatedPlots,
+    totalMatches,
+    totalInventory,
+    page: validPage,
+    limit: validLimit,
+    totalPages,
+    hasMore,
+  };
+}
+
+/**
+ * Legacy Search & Filtering (preserved for backward compatibility with simulator)
  */
 export async function searchPlots(criteria: PlotFilterCriteria): Promise<{
   plots: Plot[];
   totalMatches: number;
   totalInventory: number;
 }> {
-  // If Supabase is active, we can run queries against PostgreSQL
   if (isSupabaseConfigured && supabase) {
     try {
       let query = supabase.from('plots').select('*, phases(phase_name, phase_number)');
 
-      // Phase filter
       if (criteria.phase !== 'All') {
         query = query.eq('phase_number', criteria.phase);
       }
-
-      // Availability filter
       if (criteria.availability !== 'All') {
         query = query.eq('availability', criteria.availability);
       }
-
-      // Facing filter
       if (criteria.facing !== 'All') {
         query = query.eq('facing', criteria.facing);
       }
-
-      // Area filter based on searchMode
       if (criteria.area && criteria.area > 0) {
         if (criteria.searchMode === 'exact') {
           query = query.eq('area_sqft', criteria.area);
@@ -87,8 +258,6 @@ export async function searchPlots(criteria: PlotFilterCriteria): Promise<{
           query = query.gte('area_sqft', criteria.area);
         }
       }
-
-      // Dimensions
       if (criteria.minWidth && criteria.minWidth > 0) {
         query = query.gte('width_feet', criteria.minWidth);
       }
@@ -98,7 +267,6 @@ export async function searchPlots(criteria: PlotFilterCriteria): Promise<{
 
       const { data, error } = await query;
       if (!error && data && data.length > 0) {
-        // Map Supabase rows to Plot model
         const mapped: Plot[] = data.map((row: any) => ({
           id: row.id,
           projectId: row.project_id,
@@ -111,6 +279,7 @@ export async function searchPlots(criteria: PlotFilterCriteria): Promise<{
           widthFeet: row.width_feet ? Number(row.width_feet) : null,
           lengthFeet: row.length_feet ? Number(row.length_feet) : null,
           availability: row.availability as PlotAvailability,
+          price: row.price ? Number(row.price) : undefined,
           layoutX: row.layout_x ? Number(row.layout_x) : null,
           layoutY: row.layout_y ? Number(row.layout_y) : null,
           layoutWidth: row.layout_width ? Number(row.layout_width) : null,
@@ -119,34 +288,26 @@ export async function searchPlots(criteria: PlotFilterCriteria): Promise<{
           notes: row.notes,
         }));
 
-        return sortAndReturn(mapped, criteria, mapped.length);
+        return sortAndReturn(mapped.map(normalizePlot), criteria, mapped.length);
       }
     } catch (dbError) {
       console.warn('Supabase query failed, falling back to local dataset', dbError);
     }
   }
 
-  // Authoritative local / in-memory execution
   const allPlots = getStoredPlots();
   const totalInventory = allPlots.length;
 
-  let filtered = allPlots.filter((plot) => {
-    // 1. Phase Filter
+  const filtered = allPlots.filter((plot) => {
     if (criteria.phase !== 'All' && plot.phaseNumber !== criteria.phase) {
       return false;
     }
-
-    // 2. Availability Filter
     if (criteria.availability !== 'All' && plot.availability !== criteria.availability) {
       return false;
     }
-
-    // 3. Facing Filter
     if (criteria.facing !== 'All' && plot.facing !== criteria.facing) {
       return false;
     }
-
-    // 4. Area Search Modes
     if (criteria.area && criteria.area > 0) {
       const targetArea = criteria.area;
       if (criteria.searchMode === 'exact') {
@@ -166,8 +327,6 @@ export async function searchPlots(criteria: PlotFilterCriteria): Promise<{
         }
       }
     }
-
-    // 5. Dimension Filters
     if (criteria.minWidth && criteria.minWidth > 0) {
       if (!plot.widthFeet || plot.widthFeet < criteria.minWidth) {
         return false;
@@ -178,7 +337,6 @@ export async function searchPlots(criteria: PlotFilterCriteria): Promise<{
         return false;
       }
     }
-
     return true;
   });
 
@@ -197,7 +355,10 @@ function sortAndReturn(
       case 'area_desc':
         return b.areaSqft - a.areaSqft;
       case 'plot_asc':
-        return parseInt(a.plotNumber, 10) - parseInt(b.plotNumber, 10) || a.plotNumber.localeCompare(b.plotNumber);
+        return (
+          parseInt(a.plotNumber, 10) - parseInt(b.plotNumber, 10) ||
+          a.plotNumber.localeCompare(b.plotNumber)
+        );
       case 'phase_asc':
         return a.phaseNumber - b.phaseNumber;
       default:
@@ -213,42 +374,70 @@ function sortAndReturn(
 }
 
 /**
- * Fetch a single plot by ID or plot number
+ * Fetch a single plot by ID or plotNumber
  */
-export function getPlotById(id: string): Plot | undefined {
+export function getPlotById(idOrPlotNumber: string): Plot | undefined {
   const plots = getStoredPlots();
-  return plots.find((p) => p.id === id);
+  const searchKey = idOrPlotNumber.trim().toLowerCase();
+
+  return plots.find(
+    (p) =>
+      p.id.toLowerCase() === searchKey ||
+      p.plotNumber.toLowerCase() === searchKey ||
+      `plot-${p.plotNumber.toLowerCase()}` === searchKey ||
+      `p${p.phaseNumber}-${p.plotNumber.toLowerCase()}` === searchKey
+  );
 }
 
 /**
  * Add a new plot (Admin function)
  */
-export function addPlot(newPlotData: Omit<Plot, 'id'>): { success: boolean; error?: string; plot?: Plot } {
+export function addPlot(newPlotData: Omit<Plot, 'id'>): {
+  success: boolean;
+  error?: string;
+  plot?: Plot;
+} {
   const plots = getStoredPlots();
 
-  // Validate duplicate plot number in the same phase
   const exists = plots.some(
-    (p) => p.phaseNumber === newPlotData.phaseNumber && p.plotNumber.trim() === newPlotData.plotNumber.trim()
+    (p) =>
+      p.phaseNumber === newPlotData.phaseNumber &&
+      p.plotNumber.trim() === newPlotData.plotNumber.trim()
   );
   if (exists) {
-    return { success: false, error: `Plot ${newPlotData.plotNumber} already exists in Phase ${newPlotData.phaseNumber}.` };
+    return {
+      success: false,
+      error: `Plot ${newPlotData.plotNumber} already exists in Phase ${newPlotData.phaseNumber}.`,
+    };
   }
 
   if (newPlotData.areaSqft <= 0) {
     return { success: false, error: 'Plot area must be greater than 0 sq.ft.' };
   }
 
-  const newPlot: Plot = {
+  const pricePerSqft =
+    newPlotData.pricePerSqft ??
+    (newPlotData.price && newPlotData.areaSqft > 0
+      ? Math.round(newPlotData.price / newPlotData.areaSqft)
+      : newPlotData.isCorner
+      ? 1200
+      : 1150);
+
+  const price =
+    newPlotData.price ?? Math.round(newPlotData.areaSqft * pricePerSqft);
+
+  const newPlot: Plot = normalizePlot({
     ...newPlotData,
-    id: `plot-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    id: `plot-p${newPlotData.phaseNumber}-${newPlotData.plotNumber.trim()}`,
+    price,
+    pricePerSqft,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  };
+  });
 
   const updated = [...plots, newPlot];
   saveStoredPlots(updated);
 
-  // If Supabase is connected, attempt sync
   if (isSupabaseConfigured && supabase) {
     supabase
       .from('plots')
@@ -261,6 +450,7 @@ export function addPlot(newPlotData: Omit<Plot, 'id'>): { success: boolean; erro
         width_feet: newPlot.widthFeet,
         length_feet: newPlot.lengthFeet,
         availability: newPlot.availability,
+        price: newPlot.price,
         layout_x: newPlot.layoutX,
         layout_y: newPlot.layoutY,
         layout_width: newPlot.layoutWidth,
@@ -290,7 +480,6 @@ export function updatePlot(
 
   const current = plots[index];
 
-  // If phase or plot number is changed, check uniqueness
   if (
     (updates.plotNumber && updates.plotNumber !== current.plotNumber) ||
     (updates.phaseNumber && updates.phaseNumber !== current.phaseNumber)
@@ -298,10 +487,16 @@ export function updatePlot(
     const targetPhase = updates.phaseNumber ?? current.phaseNumber;
     const targetNumber = updates.plotNumber ?? current.plotNumber;
     const duplicate = plots.some(
-      (p) => p.id !== id && p.phaseNumber === targetPhase && p.plotNumber.trim() === targetNumber.trim()
+      (p) =>
+        p.id !== id &&
+        p.phaseNumber === targetPhase &&
+        p.plotNumber.trim() === targetNumber.trim()
     );
     if (duplicate) {
-      return { success: false, error: `Plot ${targetNumber} already exists in Phase ${targetPhase}.` };
+      return {
+        success: false,
+        error: `Plot ${targetNumber} already exists in Phase ${targetPhase}.`,
+      };
     }
   }
 
@@ -309,16 +504,15 @@ export function updatePlot(
     return { success: false, error: 'Plot area must be greater than 0 sq.ft.' };
   }
 
-  const updatedPlot: Plot = {
+  const updatedPlot: Plot = normalizePlot({
     ...current,
     ...updates,
     updatedAt: new Date().toISOString(),
-  };
+  });
 
   plots[index] = updatedPlot;
   saveStoredPlots(plots);
 
-  // Supabase sync
   if (isSupabaseConfigured && supabase) {
     supabase
       .from('plots')
@@ -329,6 +523,7 @@ export function updatePlot(
         width_feet: updatedPlot.widthFeet,
         length_feet: updatedPlot.lengthFeet,
         availability: updatedPlot.availability,
+        price: updatedPlot.price,
         layout_x: updatedPlot.layoutX,
         layout_y: updatedPlot.layoutY,
       })
@@ -392,92 +587,73 @@ export function importPlotsFromCSV(csvText: string): ImportResult {
     return result;
   }
 
-  // Parse header
   const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
   const plotNumIdx = header.findIndex((h) => h.includes('plot'));
   const phaseIdx = header.findIndex((h) => h.includes('phase'));
   const areaIdx = header.findIndex((h) => h.includes('area') || h.includes('sqft'));
   const facingIdx = header.findIndex((h) => h.includes('facing'));
-  const widthIdx = header.findIndex((h) => h.includes('width'));
-  const lengthIdx = header.findIndex((h) => h.includes('length'));
-  const availIdx = header.findIndex((h) => h.includes('avail') || h.includes('status'));
+  const statusIdx = header.findIndex((h) => h.includes('status') || h.includes('avail'));
+  const priceIdx = header.findIndex((h) => h.includes('price') || h.includes('cost'));
 
   if (plotNumIdx === -1 || areaIdx === -1) {
-    result.errors.push('Required columns missing: CSV must include at least "Plot" and "Area".');
+    result.errors.push('CSV header must contain at least "plot" and "area" columns.');
     return result;
   }
 
-  const existingPlots = getStoredPlots();
-  const newPlots: Plot[] = [];
+  const currentPlots = getStoredPlots();
+  const newlyImported: Plot[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     result.totalProcessed++;
-    const row = lines[i].split(',').map((cell) => cell.trim());
-    const plotNumber = row[plotNumIdx];
-    const rawArea = row[areaIdx];
+    const row = lines[i].split(',').map((c) => c.trim());
+    const plotNum = row[plotNumIdx];
+    const area = parseFloat(row[areaIdx]);
+    const phaseNum = phaseIdx !== -1 && row[phaseIdx] ? parseInt(row[phaseIdx], 10) : 1;
+    const facing = facingIdx !== -1 && row[facingIdx] ? (row[facingIdx] as any) : 'East';
+    const status = statusIdx !== -1 && row[statusIdx] ? (row[statusIdx] as PlotAvailability) : 'Available';
+    const rawPrice = priceIdx !== -1 && row[priceIdx] ? parseFloat(row[priceIdx]) : undefined;
 
-    if (!plotNumber || !rawArea) {
+    if (!plotNum || isNaN(area) || area <= 0) {
       result.skippedCount++;
-      result.errors.push(`Row ${i + 1}: Missing plot number or area.`);
+      result.errors.push(`Row ${i + 1}: Invalid plot number or area`);
       continue;
     }
 
-    const areaSqft = parseFloat(rawArea);
-    if (isNaN(areaSqft) || areaSqft <= 0) {
+    const exists = currentPlots.some(
+      (p) => p.phaseNumber === phaseNum && p.plotNumber === plotNum
+    );
+    if (exists) {
       result.skippedCount++;
-      result.errors.push(`Row ${i + 1}: Invalid area "${rawArea}". Must be a positive number.`);
+      result.errors.push(`Row ${i + 1}: Plot ${plotNum} in Phase ${phaseNum} already exists.`);
       continue;
     }
 
-    const phaseNumber = phaseIdx !== -1 && parseInt(row[phaseIdx], 10) ? parseInt(row[phaseIdx], 10) : 1;
-    const facingRaw = facingIdx !== -1 ? row[facingIdx] : null;
-    const facing = ['North', 'South', 'East', 'West', 'North-East', 'North-West', 'South-East', 'South-West'].includes(
-      facingRaw || ''
-    )
-      ? (facingRaw as any)
-      : null;
+    const pricePerSqft = 1150;
+    const price = rawPrice && !isNaN(rawPrice) ? rawPrice : Math.round(area * pricePerSqft);
 
-    const widthFeet = widthIdx !== -1 && parseFloat(row[widthIdx]) ? parseFloat(row[widthIdx]) : null;
-    const lengthFeet = lengthIdx !== -1 && parseFloat(row[lengthIdx]) ? parseFloat(row[lengthIdx]) : null;
-
-    const availRaw = availIdx !== -1 ? row[availIdx] : 'Available';
-    const availability: PlotAvailability =
-      availRaw === 'Sold' ? 'Sold' : availRaw === 'Reserved' ? 'Reserved' : 'Available';
-
-    // Duplicate check
-    const isDuplicate =
-      existingPlots.some((p) => p.phaseNumber === phaseNumber && p.plotNumber === plotNumber) ||
-      newPlots.some((p) => p.phaseNumber === phaseNumber && p.plotNumber === plotNumber);
-
-    if (isDuplicate) {
-      result.skippedCount++;
-      result.errors.push(`Row ${i + 1}: Duplicate Plot ${plotNumber} in Phase ${phaseNumber}.`);
-      continue;
-    }
-
-    newPlots.push({
-      id: `imported-${Date.now()}-${i}`,
+    const newPlot: Plot = normalizePlot({
+      id: `plot-p${phaseNum}-${plotNum}`,
       projectId: 'proj-swarna-bhoomi',
-      phaseId: `phase-${phaseNumber}`,
-      phaseNumber,
-      phaseName: `Phase ${phaseNumber}`,
-      plotNumber,
-      areaSqft,
+      phaseId: `phase-${phaseNum}`,
+      phaseNumber: phaseNum,
+      phaseName: `Phase ${phaseNum}`,
+      plotNumber: plotNum,
+      areaSqft: area,
       facing,
-      widthFeet,
-      lengthFeet,
-      availability,
-      layoutX: 100 + (newPlots.length % 10) * 60,
-      layoutY: 100 + Math.floor(newPlots.length / 10) * 60,
-      layoutWidth: 50,
-      layoutHeight: 40,
+      availability: status,
+      price,
+      pricePerSqft,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
 
+    currentPlots.push(newPlot);
+    newlyImported.push(newPlot);
     result.importedCount++;
   }
 
-  if (newPlots.length > 0) {
-    saveStoredPlots([...existingPlots, ...newPlots]);
+  if (newlyImported.length > 0) {
+    saveStoredPlots(currentPlots);
   }
 
   return result;

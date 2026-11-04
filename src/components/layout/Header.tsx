@@ -26,7 +26,7 @@ export function Header() {
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
   const navLinks = [
-    { label: 'Plots', href: '/#plot-finder-section' },
+    { label: 'Find a Plot', href: '/plots' },
     { label: 'Township', href: '/#township-concepts-section' },
     { label: 'Amenities', href: '/#amenities-section' },
     { label: 'Location', href: '/#location-section' },

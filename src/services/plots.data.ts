@@ -1,7 +1,7 @@
 import { Plot } from '@/types/plot';
 
-export const INITIAL_PLOTS: Plot[] = [
-  // Phase 1 (Phase Number: 1, Phase Name: "Phase 1 — Royal Enclave")
+const RAW_INITIAL_PLOTS: Plot[] = [
+  // Phase 1 (Phase Number: 1, Phase Name: "Phase 1 - Royal Enclave")
   {
     id: 'plot-p1-1',
     projectId: 'proj-swarna-bhoomi',
@@ -695,3 +695,47 @@ export const INITIAL_PLOTS: Plot[] = [
     roadWidthFeet: 40,
   },
 ];
+
+
+function enrichPlot(p: Plot): Plot {
+  const pricePerSqft = p.isCorner ? 1200 : 1150;
+  const price = p.price ?? Math.round(p.areaSqft * pricePerSqft);
+  const roadWidth = p.roadWidthFeet ?? (p.isCorner ? 40 : 30);
+  const cornerPosition = p.isCorner
+    ? "Corner plot adjoining " + roadWidth + "ft Main Avenue & 30ft Sector Cross Road"
+    : null;
+  const description =
+    p.description ??
+    ("Prime residential plot #" + p.plotNumber + " situated in " + p.phaseName + " of Swarna Bhoomi Township. Features " + (p.facing ? p.facing : "East") + " orientation, direct access to " + roadWidth + "ft blacktop road, and official DTCP approved boundary demarcation.");
+  const additionalSpecifications = p.additionalSpecifications ?? {
+    'Approval Status': 'DTCP Approved (No: 92/2026)',
+    'Survey Number': '143/1A1B, Krishnapuram',
+    'Bank Loan': '80% Approved (SBI / HDFC / Axis Bank)',
+    'Groundwater': 'Sweet Potable Water at 35 to 45 ft depth',
+    'Road Infrastructure': roadWidth + "ft Tar Blacktop with Kerb Stones",
+    'Demarcation': 'Numbered Concrete Survey Stone Placed',
+    'Title & Registration': 'Clear Parent Title, Immediate Registration & Patta',
+  };
+  const images =
+    p.images && p.images.length > 0
+      ? p.images
+      : [
+          '/assets/site/layout-plan.jpg',
+          '/assets/site/hero-banner.jpg',
+          '/assets/site/concepts.jpg',
+          '/assets/site/plot-details.jpg',
+        ];
+
+  return {
+    ...p,
+    price,
+    pricePerSqft,
+    roadWidthFeet: roadWidth,
+    cornerPosition,
+    description,
+    images,
+    additionalSpecifications,
+  };
+}
+
+export const INITIAL_PLOTS: Plot[] = RAW_INITIAL_PLOTS.map(enrichPlot);

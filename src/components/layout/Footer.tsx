@@ -59,8 +59,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/#plot-finder-section" className="hover:text-brand-gold transition-colors">
-                  Plot Finder &amp; Search
+                <Link href="/plots" className="hover:text-brand-gold transition-colors">
+                  Find Your Dream Plot
                 </Link>
               </li>
               <li>
@@ -138,7 +138,7 @@ export function Footer() {
               &copy; {new Date().getFullYear()} Swarna Bhoomi Residential Township. All rights reserved.
             </div>
             <div>
-              Website: <span className="text-brand-gold">www.swarnabhoomi.in</span>
+              Website: <span className="text-brand-gold">Designed and Developed by Nitish</span>
             </div>
           </div>
         </div>

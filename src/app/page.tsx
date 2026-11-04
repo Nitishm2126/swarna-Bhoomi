@@ -4,13 +4,12 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { FloatingMobileBar } from '@/components/layout/FloatingMobileBar';
 import { HeroSection } from '@/components/hero/HeroSection';
-import { PlotFinder } from '@/components/plots/PlotFinder';
+import { DreamPlotCTASection } from '@/components/home/DreamPlotCTASection';
 import { ProjectGallerySection } from '@/components/gallery/ProjectGallerySection';
 import { TownshipConcepts } from '@/components/home/TownshipConcepts';
 import { MoreDetailsSection } from '@/components/enquiry/MoreDetailsSection';
 import { AmenitiesSection } from '@/components/amenities/AmenitiesSection';
 import { LocationSection } from '@/components/location/LocationSection';
-import { INITIAL_PLOTS } from '@/services/plots.data';
 import {
   ShieldCheck,
   TreePine,
@@ -20,7 +19,8 @@ import {
 
 export const metadata: Metadata = {
   title: 'Swarna Bhoomi | Premium Residential Plots in Krishnapuram, Thiruvallur',
-  description: 'Swarna Bhoomi Residential Township in Krishnapuram, Thiruvallur, along Chennai–Tirupati Highway. Search 600, 700, 800, 1000, 1200 sq.ft. plots with interactive layout plan and WhatsApp enquiry.',
+  description:
+    'Swarna Bhoomi Residential Township in Krishnapuram, Thiruvallur, along Chennai–Tirupati Highway. Discover residential plots from 517 to 1,600 sq.ft. with DTCP Approval No: 92/2026.',
 };
 
 export default function HomePage() {
@@ -94,10 +94,8 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 3. Primary Business Feature: Plot Finder & Simulator */}
-        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-10">
-          <PlotFinder initialPlots={INITIAL_PLOTS} />
-        </div>
+        {/* 3. Primary Customer Feature: Find Your Dream Plot CTA */}
+        <DreamPlotCTASection />
 
         {/* 4. Official Documentation & Blueprint Gallery */}
         <ProjectGallerySection />

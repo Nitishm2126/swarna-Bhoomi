@@ -1,4 +1,12 @@
-export type FacingDirection = 'North' | 'South' | 'East' | 'West' | 'North-East' | 'North-West' | 'South-East' | 'South-West';
+export type FacingDirection =
+  | 'North'
+  | 'South'
+  | 'East'
+  | 'West'
+  | 'North-East'
+  | 'North-West'
+  | 'South-East'
+  | 'South-West';
 
 export type PlotAvailability = 'Available' | 'Reserved' | 'Sold';
 
@@ -14,14 +22,22 @@ export interface Plot {
   widthFeet?: number | null;
   lengthFeet?: number | null;
   availability: PlotAvailability;
+  // Commercial & Pricing
+  price?: number; // Total price in INR (e.g. 700000, 805000)
+  pricePerSqft?: number; // Price per sq.ft. in INR (e.g. 1150)
+  // Structural & Layout attributes
+  isCorner?: boolean;
+  cornerPosition?: string | null; // e.g. "Adjoining 30ft 1st Street & 40ft Main Avenue"
+  roadWidthFeet?: number; // e.g. 30 or 40
+  description?: string | null;
+  images?: string[];
+  additionalSpecifications?: Record<string, string | number | boolean>;
   // Layout simulator geometry
   layoutX?: number | null;
   layoutY?: number | null;
   layoutWidth?: number | null;
   layoutHeight?: number | null;
   layoutRotation?: number | null;
-  isCorner?: boolean;
-  roadWidthFeet?: number;
   notes?: string | null;
   createdAt?: string;
   updatedAt?: string;
@@ -39,6 +55,32 @@ export interface PlotFilterCriteria {
   minLength?: number | null;
   availability: PlotAvailability | 'All';
   sortBy: 'area_asc' | 'area_desc' | 'plot_asc' | 'phase_asc';
+}
+
+export type CornerPreference = 'any' | 'corner_only' | 'non_corner';
+
+export interface SmartPlotPreferences {
+  minArea?: number | null;
+  maxArea?: number | null;
+  minBudget?: number | null;
+  maxBudget?: number | null;
+  facing?: FacingDirection | 'All';
+  cornerPreference?: CornerPreference;
+  phase?: number | 'All';
+  availability?: PlotAvailability | 'All';
+  sortBy?: 'price_asc' | 'price_desc' | 'area_asc' | 'area_desc' | 'plot_asc' | 'phase_asc';
+  page?: number;
+  limit?: number;
+}
+
+export interface SmartPlotResponse {
+  plots: Plot[];
+  totalMatches: number;
+  totalInventory: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasMore: boolean;
 }
 
 export interface Project {
